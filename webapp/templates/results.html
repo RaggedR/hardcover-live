@@ -271,15 +271,22 @@
             {% for match in matches %}
             <div class="match-card">
                 <div class="match-header">
-                    <div class="match-name">{{ match.name }}</div>
+                    <div class="match-name">
+                        <a href="https://hardcover.app/@{{ match.username }}" target="_blank" style="color: inherit; text-decoration: none;">
+                            {{ match.name }}
+                        </a>
+                        <a href="https://hardcover.app/@{{ match.username }}" target="_blank" style="font-size: 0.6em; color: #667eea; margin-left: 8px;">
+                            @{{ match.username }} ↗
+                        </a>
+                    </div>
                     <div class="match-rank">#{{ loop.index }}</div>
                 </div>
 
                 <div class="compatibility">
                     <strong>Compatibility:</strong>
                     <div class="compatibility-bar">
-                        <div class="compatibility-fill" style="width: {{ (match.similarity * 100)|round }}%">
-                            {{ (match.similarity * 100)|round(1) }}%
+                        <div class="compatibility-fill" style="width: {{ match.similarity }}%">
+                            {{ match.similarity }}%
                         </div>
                     </div>
                 </div>

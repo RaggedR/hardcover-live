@@ -1,0 +1,288 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true,
+    columns=fullflexible
+}
+
+\title{Deploying a Flask Application to Google Cloud Run:\\A Practical Guide}
+\author{Hardcover Book Friend Finder Project}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This essay describes the deployment of a Flask-based book recommendation web application to Google Cloud Run, a fully managed serverless platform. We cover the key concepts of containerization, serverless computing, and the specific deployment workflow used to serve the Book Friend Finder application at scale with minimal operational overhead.
+\end{abstract}
+
+\section{Introduction}
+
+Modern web application deployment has evolved from managing physical servers to leveraging cloud-native platforms that abstract away infrastructure complexity. Google Cloud Run represents the current state of serverless container deployment, offering automatic scaling, pay-per-use pricing, and zero server management.
+
+Our application, the Book Friend Finder, is a Flask web app that serves pre-computed book recommendations. It requires no database connections or external API calls at runtime---an ideal candidate for serverless deployment.
+
+\section{Understanding Google Cloud Run}
+
+\subsection{What is Cloud Run?}
+
+Cloud Run is a fully managed compute platform that automatically scales stateless containers. Unlike traditional Platform-as-a-Service (PaaS) offerings, Cloud Run runs any containerized application, not just those built with specific frameworks.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Feature} & \textbf{Cloud Run} & \textbf{Traditional VPS} \\
+\midrule
+Scaling & Automatic (0 to N) & Manual configuration \\
+Pricing & Per-request & Per-hour (always on) \\
+Maintenance & Fully managed & User responsibility \\
+Cold starts & Yes (mitigated) & No \\
+Max instances & Configurable & Fixed \\
+\bottomrule
+\end{tabular}
+\caption{Cloud Run vs Traditional Virtual Private Server}
+\end{table}
+
+\subsection{Key Concepts}
+
+\subsubsection{Containerization}
+
+Cloud Run executes Docker containers. A container packages the application code, runtime, libraries, and dependencies into a single deployable unit. This ensures consistency between development and production environments.
+
+\begin{lstlisting}[caption={Dockerfile for our Flask application}]
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENV PORT=8080
+CMD exec gunicorn --bind :$PORT --workers 1 app:app
+\end{lstlisting}
+
+\subsubsection{Statelessness}
+
+Cloud Run containers are \textit{stateless}---they do not persist data between requests. Each request may be handled by a different container instance. This design enables horizontal scaling but requires that:
+
+\begin{itemize}
+    \item Session data be stored externally (e.g., Redis, Firestore)
+    \item File uploads go to cloud storage (e.g., Google Cloud Storage)
+    \item Application state be reconstructed from external sources
+\end{itemize}
+
+Our application handles this by \textbf{pre-computing all recommendations} and bundling them as static JSON files within the container. No runtime state is required.
+
+\subsubsection{Scale to Zero}
+
+When no requests arrive, Cloud Run scales down to zero instances, incurring no compute charges. When a request arrives, a new instance starts (``cold start''), typically in 1--3 seconds for Python applications.
+
+\begin{equation}
+\text{Monthly Cost} = \sum_{i=1}^{N} \text{CPU}_i \times \text{Time}_i + \text{Memory}_i \times \text{Time}_i + \text{Requests}
+\end{equation}
+
+For low-traffic applications, this model is significantly cheaper than always-on servers.
+
+\subsubsection{Revisions and Traffic Splitting}
+
+Each deployment creates a new \textit{revision}---an immutable snapshot of the container and configuration. Cloud Run maintains revision history and supports:
+
+\begin{itemize}
+    \item Instant rollback to previous revisions
+    \item Traffic splitting for A/B testing (e.g., 90\% to v1, 10\% to v2)
+    \item Gradual rollouts with automatic rollback on errors
+\end{itemize}
+
+\section{Deployment Workflow}
+
+\subsection{Prerequisites}
+
+Before deployment, we ensure the following are in place:
+
+\begin{enumerate}
+    \item \textbf{Google Cloud Project}: A project with billing enabled
+    \item \textbf{APIs Enabled}: Cloud Run API, Cloud Build API, Artifact Registry API
+    \item \textbf{gcloud CLI}: Installed and authenticated
+    \item \textbf{Pre-computed Data}: All recommendation JSON files generated
+\end{enumerate}
+
+\subsection{Application Structure}
+
+Our deployable \texttt{webapp/} directory contains:
+
+\begin{lstlisting}
+webapp/
+  app.py              # Flask application
+  requirements.txt    # Python dependencies
+  templates/          # Jinja2 HTML templates
+  data/
+    recommendations.json  # Pre-computed matches (2.1MB)
+    users.json           # User list (556 users)
+    clusters.json        # Cluster information
+\end{lstlisting}
+
+\subsection{The Deployment Command}
+
+Cloud Run supports source-based deployment, automatically building the container:
+
+\begin{lstlisting}[caption={Deployment command}]
+gcloud run deploy book-friend-finder \
+  --source ./webapp \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --memory 512Mi \
+  --cpu 1 \
+  --max-instances 10
+\end{lstlisting}
+
+\textbf{Parameter explanations:}
+
+\begin{itemize}
+    \item \texttt{--source ./webapp}: Directory containing the application
+    \item \texttt{--region us-central1}: Deployment region (affects latency and pricing)
+    \item \texttt{--allow-unauthenticated}: Public access without authentication
+    \item \texttt{--memory 512Mi}: RAM allocation per instance
+    \item \texttt{--cpu 1}: vCPU allocation per instance
+    \item \texttt{--max-instances 10}: Upper bound on concurrent instances
+\end{itemize}
+
+\subsection{Build Process}
+
+When deploying from source, Cloud Build performs these steps:
+
+\begin{enumerate}
+    \item \textbf{Upload}: Source files are uploaded to Cloud Storage
+    \item \textbf{Detect}: Buildpacks detect the application type (Python/Flask)
+    \item \textbf{Build}: A container image is created with all dependencies
+    \item \textbf{Push}: The image is stored in Artifact Registry
+    \item \textbf{Deploy}: Cloud Run creates a new revision from the image
+    \item \textbf{Route}: Traffic is switched to the new revision
+\end{enumerate}
+
+Total deployment time is typically 4--6 minutes, with subsequent deployments faster due to layer caching.
+
+\section{Production Configuration}
+
+\subsection{Resource Allocation}
+
+Choosing appropriate resources involves balancing cost and performance:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Configuration} & \textbf{Memory} & \textbf{CPU} & \textbf{Use Case} \\
+\midrule
+Minimal & 256Mi & 1 & Simple APIs \\
+Standard & 512Mi & 1 & Our application \\
+Compute-heavy & 2Gi & 2 & ML inference \\
+Memory-heavy & 8Gi & 2 & Large datasets \\
+\bottomrule
+\end{tabular}
+\caption{Resource allocation guidelines}
+\end{table}
+
+Our application loads a 2.1MB JSON file into memory and performs dictionary lookups. 512MB provides comfortable headroom.
+
+\subsection{Concurrency Settings}
+
+Cloud Run allows configuring how many concurrent requests each instance handles:
+
+\begin{equation}
+\text{Required Instances} = \left\lceil \frac{\text{Concurrent Requests}}{\text{Concurrency per Instance}} \right\rceil
+\end{equation}
+
+The default concurrency is 80 requests per instance. For CPU-bound workloads, lower values (1--10) prevent resource contention. Our I/O-bound Flask app handles 80 concurrent requests efficiently.
+
+\subsection{Cold Start Mitigation}
+
+Cold starts occur when a new instance must be initialized. Strategies to reduce impact:
+
+\begin{enumerate}
+    \item \textbf{Minimum instances}: Keep 1+ instances always warm (\texttt{--min-instances 1})
+    \item \textbf{Smaller containers}: Reduce image size for faster startup
+    \item \textbf{Lazy loading}: Defer non-critical initialization
+    \item \textbf{CPU boost}: Cloud Run provides extra CPU during startup
+\end{enumerate}
+
+For our application, cold starts are approximately 2 seconds---acceptable for a recommendation service.
+
+\section{Cost Analysis}
+
+\subsection{Free Tier}
+
+Cloud Run provides a generous free tier:
+
+\begin{itemize}
+    \item 2,000,000 requests per month
+    \item 360,000 GB-seconds of memory
+    \item 180,000 vCPU-seconds
+    \item 1 GB network egress (North America)
+\end{itemize}
+
+\subsection{Our Application's Usage}
+
+\begin{equation}
+\text{Request Cost} = 512\text{MB} \times 0.5\text{s} = 0.25 \text{ GB-seconds}
+\end{equation}
+
+\begin{equation}
+\text{Free Requests} = \frac{360,000}{0.25} = 1,440,000 \text{ requests/month}
+\end{equation}
+
+For a personal project with moderate traffic (1,000 requests/day = 30,000/month), the application runs entirely within the free tier.
+
+\section{Updating the Deployment}
+
+When new data is available (e.g., more users, updated recommendations), the update process is:
+
+\begin{lstlisting}[caption={Update workflow}]
+# 1. Generate new pre-computed data
+python3 precompute_all.py
+
+# 2. Verify data files
+ls -lh webapp/data/
+
+# 3. Deploy new revision
+gcloud run deploy book-friend-finder \
+  --source ./webapp \
+  --region us-central1 \
+  --allow-unauthenticated
+\end{lstlisting}
+
+Cloud Run automatically:
+\begin{itemize}
+    \item Creates a new revision with the updated files
+    \item Routes 100\% of traffic to the new revision
+    \item Keeps previous revisions for instant rollback
+\end{itemize}
+
+\section{Conclusion}
+
+Google Cloud Run provides an ideal deployment target for stateless web applications like our Book Friend Finder. Key advantages include:
+
+\begin{enumerate}
+    \item \textbf{Zero infrastructure management}: No servers to patch or maintain
+    \item \textbf{Automatic scaling}: Handles traffic spikes without configuration
+    \item \textbf{Cost efficiency}: Pay only for actual usage, with generous free tier
+    \item \textbf{Simple deployments}: Single command to deploy from source
+    \item \textbf{Built-in reliability}: Automatic load balancing and health checks
+\end{enumerate}
+
+For applications that can be designed as stateless services with pre-computed data, Cloud Run eliminates the operational burden of traditional hosting while providing production-grade reliability and scalability.
+
+\vspace{1em}
+\noindent\textbf{Live Application:} \url{https://book-friend-finder-770103525576.us-central1.run.app}
+
+\end{document}

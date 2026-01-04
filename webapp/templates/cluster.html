@@ -269,12 +269,18 @@
             {% for member in members %}
             <div class="member-card {% if member.is_viewing_user %}viewing-user{% endif %}">
                 <div class="member-name">
-                    {{ member.name }}
+                    <a href="https://hardcover.app/@{{ member.username }}" target="_blank" style="color: inherit; text-decoration: none;">
+                        {{ member.name }}
+                    </a>
                     {% if member.is_viewing_user %}
                     <span class="you-badge">YOU</span>
                     {% endif %}
                 </div>
-                <div class="member-username">@{{ member.username }}</div>
+                <div class="member-username">
+                    <a href="https://hardcover.app/@{{ member.username }}" target="_blank" style="color: #667eea; text-decoration: none;">
+                        @{{ member.username }} ↗
+                    </a>
+                </div>
 
                 <div class="member-stats">
                     <div class="stat-box">
