@@ -150,8 +150,8 @@
             <select name="user_id" id="user_id" required>
                 <option value="">-- Choose your name --</option>
                 {% for user in users %}
-                <option value="{{ user.user.id }}">
-                    {{ user.user.name }} (@{{ user.user.username }})
+                <option value="{{ user.id }}">
+                    {{ user.name }} (@{{ user.username }})
                 </option>
                 {% endfor %}
             </select>

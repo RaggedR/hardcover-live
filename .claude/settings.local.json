@@ -15,7 +15,9 @@
       "Bash(curl:*)",
       "Bash(cat:*)",
       "Bash(pdflatex:*)",
-      "Bash(pdfinfo:*)"
+      "Bash(pdfinfo:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)"
     ]
   }
 }

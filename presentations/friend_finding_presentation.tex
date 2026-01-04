@@ -51,7 +51,38 @@ Hybrid (50/50) & 8.83\% \\
 \end{frame}
 
 % ============================================================================
-% SLIDE 2: Data Filtering and Computational Complexity
+% SLIDE 2: The Hybrid Method
+% ============================================================================
+
+\begin{frame}{The Hybrid Method: Best of Both Worlds}
+
+\begin{block}{The Solution: 50/50 Hybrid Approach}
+Combine two recommendation strategies:
+
+\vspace{0.3cm}
+
+\begin{equation*}
+\text{Final Score} = 0.5 \times \text{Popularity Score} + 0.5 \times \text{Collaborative Score}
+\end{equation*}
+
+\vspace{0.3cm}
+
+\begin{itemize}
+    \item \textbf{Popularity:} Recommend books many users liked (safe baseline)
+    \item \textbf{Collaborative:} Recommend based on user's learned preferences (personalization)
+\end{itemize}
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{block}{Result}
+\textbf{8.83\% precision} - outperforms both individual methods! (17\% better than popularity alone)
+\end{block}
+
+\end{frame}
+
+% ============================================================================
+% SLIDE 3: Data Filtering and Computational Complexity
 % ============================================================================
 
 \begin{frame}{Data Filtering \& Scalability}
@@ -81,125 +112,69 @@ Training time and scalability (300 iterations, 20 features):
 \end{frame}
 
 % ============================================================================
-% SLIDE 3: Masking Solution
+% SLIDE 4: Implicit Feedback Weighting
 % ============================================================================
 
-\begin{frame}{The Masking Solution}
+\begin{frame}{Implicit Feedback: Weighting Different Book Statuses}
 
-\begin{block}{Problem: 95.75\% Sparsity}
-Most entries in the ratings matrix are \alert{unknown}, not negative ratings. We can't train on missing data!
+\begin{block}{Not All Interactions Are Equal}
+\begin{itemize}
+    \item \textbf{Read with rating $\geq$ 3:} 1.0 (strong positive - definitely liked)
+    \item \textbf{Currently reading:} 0.7 (moderate positive - probably enjoying)
+    \item \textbf{Want to read:} 0.3 (weak positive - interested)
+    \item \textbf{Read with rating $<$ 3 / DNF:} 0.0 (negative - disliked)
+\end{itemize}
 \end{block}
-
-\vspace{0.5cm}
-
-\begin{block}{Solution: Masking Matrix $R$}
-We use a \alert{mask matrix $R$} where:
-\begin{equation*}
-R[i,j] = \begin{cases}
-1 & \text{if user } i \text{ interacted with book } j \\
-0 & \text{otherwise (unread)}
-\end{cases}
-\end{equation*}
 
 \vspace{0.3cm}
 
-\textbf{Key insight:} Only train on known interactions (4.25\%), ignore unread books (95.75\%)
-
-\vspace{0.3cm}
-
-This prevents the model from trying to predict missing data and focuses learning on actual user preferences.
+\begin{block}{What About Unrated/Unread Books?}
+\begin{itemize}
+    \item \textbf{During training:} Both unrated and unread books are masked out
+    \item \textbf{After training:} Model predicts values for all unrated/unread books
+    \item \textbf{Recommendations:} Books with highest predicted values
+\end{itemize}
 \end{block}
+
+\vspace{0.2cm}
+
+\textbf{Impact:} Added 11,424 extra signals (75\% more data), improving precision from 2.45\% to 5.31\%
 
 \end{frame}
 
 % ============================================================================
-% SLIDE 4: Matrix Factorization
+% SLIDE 5: Matrix Factorization
 % ============================================================================
 
 \begin{frame}{Matrix Factorization: Learning User Preferences}
 
 \begin{center}
-\begin{tikzpicture}[scale=1.0]
+\begin{tikzpicture}[scale=0.85]
     % Y matrix (Ratings)
     \draw[thick] (0,0) rectangle (2.5,5);
     \node at (1.25,2.5) {\Large $Y$};
-    \node[below] at (1.25,-1.3) {\large 246 users};
+    \node[below] at (1.25,-0.3) {\large 246 users};
     \node[left,rotate=90] at (-0.6,2.5) {\large 2,547 books};
-    \node[above] at (1.25,5.4) {\textbf{Ratings Matrix}};
-
-    % Approximately equal
-    \node at (3.5,3.0) {\Large $\approx$};
-
-    % Sigmoid function
-    \node at (4.5,3.0) {\Large $\sigma($};
+    \node[above] at (1.25,5.4) {\textbf{Ratings}};
 
     % X matrix (Book features)
-    \draw[thick,fill=blue!20] (5.2,0) rectangle (6.7,5);
-    \node at (5.95,2.5) {\Large $X$};
-    \node[below] at (5.95,-1.3) {\large 20};
-    \node[left,rotate=90] at (4.7,2.5) {\large 2,547};
-    \node[above] at (5.95,5.4) {\textbf{Book}};
-    \node[above] at (5.95,4.9) {\textbf{Features}};
-
-    % Multiplication symbol
-    \node at (6.9,3.0) {\Large $\times$};
+    \draw[thick,fill=blue!20] (3.5,0) rectangle (5.0,5);
+    \node at (4.25,2.5) {\Large $X$};
+    \node[below] at (4.25,-0.3) {\large 20};
+    \node[above] at (4.25,5.4) {\textbf{Book}};
 
     % W^T matrix (User features transposed)
-    \draw[thick,fill=green!20] (7.4,1.5) rectangle (11.4,3.5);
-    \node at (9.4,2.5) {\Large $W^T$};
-    \node[below] at (9.4,0.9) {\large 246};
-    \node[left,rotate=90] at (6.9,2.5) {\large 20};
-    \node[above] at (9.4,3.9) {\textbf{User Features} (transposed)};
-
-    % Closing parenthesis for sigmoid
-    \node at (11.9,3.0) {\Large $)$};
-
-    % Dimensions annotation
-    \draw[<->,dashed,thick] (6.7,5.8) -- (7.4,5.8);
-    \node[above] at (7.05,5.8) {\small 20 features};
+    \draw[thick,fill=green!20] (5.5,1.5) rectangle (9.5,3.5);
+    \node at (7.5,2.5) {\Large $W^T$};
+    \node[below] at (7.5,1.1) {\large 246};
+    \node[right,rotate=90] at (10.0,2.5) {\large 20};
+    \node[above] at (7.5,3.9) {\textbf{Users}};
 \end{tikzpicture}
 \end{center}
 
 \vspace{0.3cm}
 
 Each user gets a \alert{20-dimensional feature vector} describing their reading preferences
-
-\end{frame}
-
-% ============================================================================
-% SLIDE 5: The Hybrid Method
-% ============================================================================
-
-\begin{frame}{The Hybrid Method: Best of Both Worlds}
-
-\begin{block}{Why Hybrid?}
-Pure collaborative filtering (2.16\%) performed \alert{worse} than just recommending popular books (7.56\%)!
-\end{block}
-
-\vspace{0.3cm}
-
-\begin{block}{The Solution: 50/50 Hybrid Approach}
-Combine two recommendation strategies:
-
-\vspace{0.3cm}
-
-\begin{equation*}
-\text{Final Score} = 0.5 \times \text{Popularity Score} + 0.5 \times \text{Collaborative Score}
-\end{equation*}
-
-\vspace{0.3cm}
-
-\begin{itemize}
-    \item \textbf{Popularity:} Recommend books many users liked (safe baseline)
-    \item \textbf{Collaborative:} Recommend based on user's learned preferences (personalization)
-\end{itemize}
-\end{block}
-
-\vspace{0.3cm}
-
-\begin{block}{Result}
-\textbf{8.83\% precision} - outperforms both individual methods! (17\% better than popularity alone)
-\end{block}
 
 \end{frame}
 
@@ -234,7 +209,7 @@ Combine two recommendation strategies:
 
 \vspace{0.3cm}
 
-\textbf{Result:} 13 distinct reading groups (Fantasy Fans, Sci-Fi Enthusiasts, etc.)
+\textbf{Result:} 13 distinct reading groups
 
 \end{frame}
 

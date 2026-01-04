@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.11.8)  2 JAN 2026 23:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.11.8)  3 JAN 2026 07:37
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -992,31 +992,14 @@ thkerncmss.
 [2
 
 ]
-Overfull \vbox (6.217pt too high) detected at line 113
- []
-
-
 
 [3
 
 ]
-Overfull \hbox (28.32147pt too wide) in paragraph at lines 167--167
- [] 
- []
-
-
-Overfull \vbox (62.21312pt too high) detected at line 167
- []
-
-
 
 [4
 
 ]
-Overfull \vbox (42.60461pt too high) detected at line 204
- []
-
-
 
 [5
 
@@ -1044,27 +1027,25 @@ nged.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 24937 strings out of 473190
- 499328 string characters out of 5715800
- 863497 words of memory out of 5000000
- 47683 multiletter control sequences out of 15000+600000
- 571942 words of font info for 83 fonts, out of 8000000 for 9000
+ 24909 strings out of 473190
+ 498615 string characters out of 5715800
+ 863496 words of memory out of 5000000
+ 47655 multiletter control sequences out of 15000+600000
+ 570292 words of font info for 77 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  128i,15n,123p,422b,797s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb
-></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb>
-</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb><
-/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></
-usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb></u
-sr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></usr
-/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssbx10.pfb></us
-r/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi10.pfb></us
-r/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi12.pfb></us
-r/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
-Output written on friend_finding_presentation.pdf (6 pages, 141141 bytes).
+</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
+></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb>
+</usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss12.pfb><
+/usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb></u
+sr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssbx10.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi10.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmssi12.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+Output written on friend_finding_presentation.pdf (6 pages, 122064 bytes).
 PDF statistics:
- 348 PDF objects out of 1000 (max. 8388607)
- 248 compressed objects within 3 object streams
+ 326 PDF objects out of 1000 (max. 8388607)
+ 236 compressed objects within 3 object streams
  13 named destinations out of 1000 (max. 500000)
- 379 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 343 words of extra memory for PDF output out of 10000 (max. 10000000)
 
