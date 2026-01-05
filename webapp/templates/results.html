@@ -227,6 +227,26 @@
         .emoji {
             font-size: 1.2em;
         }
+
+        .chat-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .show-more-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -261,6 +281,7 @@
             </div>
 
             <a href="/" class="back-button">← Find Friends for Someone Else</a>
+            <a href="/chat?user_id={{ user.id }}" class="back-button" style="margin-left: 10px; background: #667eea; color: white;">💬 My Messages</a>
         </div>
 
         <div class="matches">
@@ -294,6 +315,7 @@
                 <div class="match-stats">
                     <span>📚 <strong>{{ match.num_read }}</strong> books read</span>
                     <span>🤝 <strong>{{ match.shared_books|length }}</strong> books in common</span>
+                    <a href="/chat/{{ match.user_id }}?user_id={{ user.id }}" class="chat-button">💬 Chat</a>
                 </div>
 
                 {% if match.shared_books %}
@@ -304,8 +326,13 @@
                         <div class="book-item">{{ book }}</div>
                         {% endfor %}
                         {% if match.shared_books|length > 10 %}
-                        <div class="book-item" style="color: #999; font-style: italic;">
-                            ...and {{ match.shared_books|length - 10 }} more!
+                        <div class="more-books" id="more-books-{{ loop.index }}" style="display: none;">
+                            {% for book in match.shared_books[10:] %}
+                            <div class="book-item">{{ book }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="book-item show-more-link" style="color: #667eea; font-style: italic; cursor: pointer;" onclick="toggleMoreBooks({{ loop.index }}, {{ match.shared_books|length - 10 }})">
+                            ...and <span id="more-count-{{ loop.index }}">{{ match.shared_books|length - 10 }}</span> more!
                         </div>
                         {% endif %}
                     </div>
@@ -340,5 +367,20 @@
             <p>Reach out to your matches and chat about your favorite books!</p>
         </div>
     </div>
+
+    <script>
+        function toggleMoreBooks(matchIndex, count) {
+            const moreBooks = document.getElementById('more-books-' + matchIndex);
+            const link = moreBooks.nextElementSibling;
+
+            if (moreBooks.style.display === 'none') {
+                moreBooks.style.display = 'block';
+                link.innerHTML = '...show less';
+            } else {
+                moreBooks.style.display = 'none';
+                link.innerHTML = '...and <span id="more-count-' + matchIndex + '">' + count + '</span> more!';
+            }
+        }
+    </script>
 </body>
 </html>

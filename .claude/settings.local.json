@@ -17,7 +17,13 @@
       "Bash(pdflatex:*)",
       "Bash(pdfinfo:*)",
       "Bash(mkdir:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(for i in {1..19})",
+      "Bash(do echo \"=== Batch $i/19 ===\")",
+      "Bash(done)",
+      "Bash(for i in {1..20})",
+      "Bash(do echo \"=== Batch $i/20 ===\")",
+      "Bash(gcloud run deploy:*)"
     ]
   }
 }

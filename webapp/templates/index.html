@@ -85,6 +85,70 @@
             border-color: #667eea;
         }
 
+        .user-search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .user-search-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .user-search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .user-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .user-option:last-child {
+            border-bottom: none;
+        }
+
+        .user-option:hover, .user-option.highlighted {
+            background: #f0f3ff;
+        }
+
+        .user-option .username {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .no-results {
+            padding: 12px 15px;
+            color: #999;
+            font-style: italic;
+        }
+
         .matches-select {
             margin-top: 20px;
         }
@@ -130,6 +194,25 @@
         .emoji {
             font-size: 1.5em;
         }
+
+        .messages-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .messages-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.2s;
+        }
+
+        .messages-link a:hover {
+            color: #764ba2;
+        }
     </style>
 </head>
 <body>
@@ -146,15 +229,16 @@
         </div>
 
         <form method="POST" action="/find_friends">
-            <label for="user_id">Select Your Name:</label>
-            <select name="user_id" id="user_id" required>
-                <option value="">-- Choose your name --</option>
-                {% for user in users %}
-                <option value="{{ user.id }}">
-                    {{ user.name }} (@{{ user.username }})
-                </option>
-                {% endfor %}
-            </select>
+            <label for="user_search">Select Your Name:</label>
+            <div class="user-search-container">
+                <input type="text"
+                       id="user_search"
+                       class="user-search-input"
+                       placeholder="Start typing your name or username..."
+                       autocomplete="off">
+                <input type="hidden" name="user_id" id="user_id" required>
+                <div id="user_dropdown" class="user-dropdown"></div>
+            </div>
 
             <div class="matches-select">
                 <label for="num_matches">Number of matches to show:</label>
@@ -170,10 +254,125 @@
             </button>
         </form>
 
+        <div id="messages-link" class="messages-link">
+            <a href="#" id="view-messages" onclick="return checkUserSelected()">💬 View My Messages</a>
+        </div>
+
         <div class="footer">
             <p>Powered by collaborative filtering & ML clustering</p>
             <p>{{ users|length }} active readers • 8.83% precision</p>
         </div>
     </div>
+
+    <script>
+        const users = [
+            {% for user in users %}
+            { id: {{ user.id }}, name: "{{ user.name | e }}", username: "{{ user.username | e }}" }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        const searchInput = document.getElementById('user_search');
+        const userIdInput = document.getElementById('user_id');
+        const dropdown = document.getElementById('user_dropdown');
+        const viewMessagesLink = document.getElementById('view-messages');
+        let highlightedIndex = -1;
+
+        function renderDropdown(filteredUsers) {
+            if (filteredUsers.length === 0) {
+                dropdown.innerHTML = '<div class="no-results">No users found</div>';
+            } else {
+                dropdown.innerHTML = filteredUsers.slice(0, 20).map((user, idx) =>
+                    `<div class="user-option" data-id="${user.id}" data-name="${user.name}" data-username="${user.username}">
+                        ${user.name} <span class="username">@${user.username}</span>
+                    </div>`
+                ).join('');
+            }
+            dropdown.classList.add('show');
+            highlightedIndex = -1;
+        }
+
+        function filterUsers(query) {
+            const q = query.toLowerCase();
+            return users.filter(u =>
+                u.name.toLowerCase().startsWith(q) ||
+                u.username.toLowerCase().startsWith(q)
+            );
+        }
+
+        function selectUser(id, name, username) {
+            userIdInput.value = id;
+            searchInput.value = `${name} (@${username})`;
+            dropdown.classList.remove('show');
+            viewMessagesLink.href = '/chat?user_id=' + id;
+        }
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                renderDropdown(filterUsers(query));
+            } else {
+                dropdown.classList.remove('show');
+            }
+            userIdInput.value = '';
+        });
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length > 0 && !userIdInput.value) {
+                renderDropdown(filterUsers(this.value.trim()));
+            }
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const options = dropdown.querySelectorAll('.user-option');
+            if (!dropdown.classList.contains('show') || options.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                highlightedIndex = Math.min(highlightedIndex + 1, options.length - 1);
+                updateHighlight(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                highlightedIndex = Math.max(highlightedIndex - 1, 0);
+                updateHighlight(options);
+            } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+                e.preventDefault();
+                const opt = options[highlightedIndex];
+                selectUser(opt.dataset.id, opt.dataset.name, opt.dataset.username);
+            } else if (e.key === 'Escape') {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        function updateHighlight(options) {
+            options.forEach((opt, idx) => {
+                opt.classList.toggle('highlighted', idx === highlightedIndex);
+            });
+            if (highlightedIndex >= 0) {
+                options[highlightedIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        dropdown.addEventListener('click', function(e) {
+            const option = e.target.closest('.user-option');
+            if (option) {
+                selectUser(option.dataset.id, option.dataset.name, option.dataset.username);
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.user-search-container')) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        function checkUserSelected() {
+            if (!userIdInput.value) {
+                alert('Please select your name first');
+                searchInput.focus();
+                return false;
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

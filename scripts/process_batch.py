@@ -27,7 +27,7 @@ API_TOKEN = os.getenv("HARDCOVER_API_TOKEN", "YOUR_API_TOKEN_HERE")
 USERS_FILE = os.path.expanduser("~/data/hardcover/users.json")
 USER_BOOKS_FILE = os.path.expanduser("~/data/hardcover/user_books.json")
 BOOKS_USERS_FILE = os.path.expanduser("~/data/hardcover/books_users.json")
-PROGRESS_FILE = os.path.expanduser("~/git/hardcover/progress.json")
+PROGRESS_FILE = os.path.expanduser("~/git/hardcover-live/progress.json")
 BATCH_SIZE = 25
 REQUEST_DELAY = 1.0
 

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - {{ user.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
+        .conversations {
+            margin-top: 20px;
+        }
+
+        .conversation-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+
+        .conversation-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .conversation-card.unread {
+            border-left: 4px solid #667eea;
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .conversation-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .conversation-time {
+            color: #999;
+            font-size: 0.85em;
+        }
+
+        .conversation-preview {
+            color: #666;
+            font-size: 0.95em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversation-preview.unread {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .unread-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .empty-state {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            color: #666;
+        }
+
+        .empty-state h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .find-friends-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .find-friends-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Messages</h1>
+            <p class="subtitle">Logged in as <strong>{{ user.name }}</strong></p>
+            <a href="/" class="back-button">Back to Home</a>
+        </div>
+
+        <div class="conversations">
+            {% if conversations %}
+                {% for conv in conversations %}
+                <a href="/chat/{{ conv.other_user_id }}?user_id={{ user.id }}" class="conversation-card {% if conv.unread_count > 0 %}unread{% endif %}">
+                    <div class="conversation-header">
+                        <span class="conversation-name">
+                            {{ conv.other_user_name }}
+                            {% if conv.unread_count > 0 %}
+                            <span class="unread-badge">{{ conv.unread_count }}</span>
+                            {% endif %}
+                        </span>
+                        <span class="conversation-time">{{ conv.last_timestamp_formatted }}</span>
+                    </div>
+                    <div class="conversation-preview {% if conv.unread_count > 0 %}unread{% endif %}">
+                        {% if conv.last_message_from_me %}You: {% endif %}{{ conv.last_message[:80] }}{% if conv.last_message|length > 80 %}...{% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <h2>No messages yet</h2>
+                    <p>Find your book friends and start chatting!</p>
+                    <form action="/find_friends" method="POST">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <input type="hidden" name="num_matches" value="10">
+                        <button type="submit" class="find-friends-btn">Find Book Friends</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Poll for new messages every 5 seconds
+        setInterval(function() {
+            fetch('/chat/unread_count?user_id={{ user.id }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.count > 0) {
+                        // Reload page if there are new messages
+                        location.reload();
+                    }
+                });
+        }, 5000);
+    </script>
+</body>
+</html>
