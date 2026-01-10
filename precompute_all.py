@@ -76,6 +76,7 @@ user_id_to_idx = {u['user']['id']: idx for idx, u in enumerate(filtered_users)}
 user_idx_to_id = {idx: u['user']['id'] for idx, u in enumerate(filtered_users)}
 book_id_to_idx = {b['book']['id']: idx for idx, b in enumerate(filtered_books)}
 book_idx_to_title = {idx: b['book']['title'] for idx, b in enumerate(filtered_books)}
+book_idx_to_slug = {idx: b['book'].get('slug', '') for idx, b in enumerate(filtered_books)}
 
 num_movies = len(filtered_books)
 num_users = len(filtered_users)
@@ -199,20 +200,20 @@ for user_idx in range(num_users):
         user_read = set(user_books_dict[user_idx]['read'])
         other_read = set(user_books_dict[other_idx]['read'])
         shared_books = user_read & other_read
-        shared_book_titles = [book_idx_to_title[idx] for idx in shared_books]
+        shared_book_info = [{'title': book_idx_to_title[idx], 'slug': book_idx_to_slug[idx]} for idx in shared_books]
 
         # Books they've read that you want
         user_want = set(user_books_dict[user_idx]['want'])
         can_recommend = (other_read - user_read) & user_want
-        recommend_titles = [book_idx_to_title[idx] for idx in can_recommend]
+        recommend_info = [{'title': book_idx_to_title[idx], 'slug': book_idx_to_slug[idx]} for idx in can_recommend]
 
         matches.append({
             'user_id': int(user_idx_to_id[other_idx]),
             'name': other_user['name'],
             'username': other_user['username'],
             'similarity': round(similarity * 100, 1),  # Convert to percentage
-            'shared_books': shared_book_titles[:10],  # Limit to top 10
-            'can_recommend': recommend_titles[:5],  # Limit to top 5
+            'shared_books': shared_book_info[:10],  # Limit to top 10
+            'can_recommend': recommend_info[:5],  # Limit to top 5
             'num_read': len(other_read)
         })
 

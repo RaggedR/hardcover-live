@@ -226,7 +226,7 @@
                     <p>Say hi to {{ other_user.name }}</p>
                     {% if shared_books %}
                     <div class="shared-books-hint">
-                        <strong>Conversation starter:</strong> You both read "{{ shared_books[0] }}"
+                        <strong>Conversation starter:</strong> You both read "{% if shared_books[0] is mapping %}{{ shared_books[0].title }}{% else %}{{ shared_books[0] }}{% endif %}"
                     </div>
                     {% endif %}
                 </div>

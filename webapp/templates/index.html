@@ -234,7 +234,7 @@
                 <input type="text"
                        id="user_search"
                        class="user-search-input"
-                       placeholder="Start typing your name or username..."
+                       placeholder="Type name or @username..."
                        autocomplete="off">
                 <input type="hidden" name="user_id" id="user_id" required>
                 <div id="user_dropdown" class="user-dropdown"></div>
@@ -281,7 +281,7 @@
             if (filteredUsers.length === 0) {
                 dropdown.innerHTML = '<div class="no-results">No users found</div>';
             } else {
-                dropdown.innerHTML = filteredUsers.slice(0, 20).map((user, idx) =>
+                dropdown.innerHTML = filteredUsers.map((user, idx) =>
                     `<div class="user-option" data-id="${user.id}" data-name="${user.name}" data-username="${user.username}">
                         ${user.name} <span class="username">@${user.username}</span>
                     </div>`
@@ -293,10 +293,22 @@
 
         function filterUsers(query) {
             const q = query.toLowerCase();
-            return users.filter(u =>
-                u.name.toLowerCase().startsWith(q) ||
-                u.username.toLowerCase().startsWith(q)
-            );
+            if (q.startsWith('@')) {
+                // Match username prefix (strip the @)
+                const usernameQuery = q.slice(1);
+                return users.filter(u =>
+                    u.username.toLowerCase().startsWith(usernameQuery)
+                );
+            } else {
+                // Match name prefix
+                return users.filter(u =>
+                    u.name.toLowerCase().startsWith(q)
+                );
+            }
+        }
+
+        function getAllUsersSorted() {
+            return [...users].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
         }
 
         function selectUser(id, name, username) {
@@ -311,14 +323,18 @@
             if (query.length > 0) {
                 renderDropdown(filterUsers(query));
             } else {
-                dropdown.classList.remove('show');
+                renderDropdown(getAllUsersSorted());
             }
             userIdInput.value = '';
         });
 
         searchInput.addEventListener('focus', function() {
-            if (this.value.trim().length > 0 && !userIdInput.value) {
-                renderDropdown(filterUsers(this.value.trim()));
+            if (userIdInput.value) return; // Already selected a user
+            const query = this.value.trim();
+            if (query.length > 0) {
+                renderDropdown(filterUsers(query));
+            } else {
+                renderDropdown(getAllUsersSorted());
             }
         });
 

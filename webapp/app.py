@@ -67,6 +67,7 @@ def index():
 def find_friends():
     """Find friends for selected user"""
     user_id = request.form['user_id']
+    num_matches = int(request.form.get('num_matches', 5))
 
     # Look up pre-computed recommendations
     if user_id not in RECOMMENDATIONS:
@@ -82,7 +83,7 @@ def find_friends():
                          cluster_name=data['cluster_name'],
                          cluster_id=data['cluster_id'],
                          cluster_size=data['cluster_size'],
-                         matches=data['matches'])
+                         matches=data['matches'][:num_matches])
 
 
 @app.route('/cluster/<int:cluster_id>')

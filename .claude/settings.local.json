@@ -23,7 +23,12 @@
       "Bash(done)",
       "Bash(for i in {1..20})",
       "Bash(do echo \"=== Batch $i/20 ===\")",
-      "Bash(gcloud run deploy:*)"
+      "Bash(gcloud run deploy:*)",
+      "Bash(for i in {1..40})",
+      "Bash(do echo \"=== Batch $i/40 ===\")",
+      "Bash(lsof:*)",
+      "Bash(for i in {1..2})",
+      "Bash(do echo \"=== Batch $i/2 ===\")"
     ]
   }
 }

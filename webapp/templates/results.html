@@ -187,6 +187,34 @@
             content: "📖 ";
         }
 
+        .book-link {
+            display: inline-block;
+            width: 16px;
+            height: 20px;
+            margin-left: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px 4px 4px 2px;
+            position: relative;
+            text-decoration: none;
+            vertical-align: middle;
+            transition: transform 0.2s;
+        }
+
+        .book-link:before {
+            content: "";
+            position: absolute;
+            left: 2px;
+            top: 3px;
+            width: 10px;
+            height: 2px;
+            background: rgba(255,255,255,0.7);
+            box-shadow: 0 4px 0 rgba(255,255,255,0.7), 0 8px 0 rgba(255,255,255,0.7);
+        }
+
+        .book-link:hover {
+            transform: scale(1.2);
+        }
+
         .no-books {
             color: #999;
             font-style: italic;
@@ -323,12 +351,12 @@
                     <div class="section-title">Shared Favorite Books:</div>
                     <div class="book-list">
                         {% for book in match.shared_books[:10] %}
-                        <div class="book-item">{{ book }}</div>
+                        <div class="book-item">{% if book is mapping %}{{ book.title }}<a href="https://hardcover.app/books/{{ book.slug }}" target="_blank" class="book-link" title="View on Hardcover"></a>{% else %}{{ book }}{% endif %}</div>
                         {% endfor %}
                         {% if match.shared_books|length > 10 %}
                         <div class="more-books" id="more-books-{{ loop.index }}" style="display: none;">
                             {% for book in match.shared_books[10:] %}
-                            <div class="book-item">{{ book }}</div>
+                            <div class="book-item">{% if book is mapping %}{{ book.title }}<a href="https://hardcover.app/books/{{ book.slug }}" target="_blank" class="book-link" title="View on Hardcover"></a>{% else %}{{ book }}{% endif %}</div>
                             {% endfor %}
                         </div>
                         <div class="book-item show-more-link" style="color: #667eea; font-style: italic; cursor: pointer;" onclick="toggleMoreBooks({{ loop.index }}, {{ match.shared_books|length - 10 }})">
@@ -347,7 +375,7 @@
                             They've read <strong>{{ match.can_recommend|length }}</strong> books you want to read! Ask them about:
                         </p>
                         {% for book in match.can_recommend[:5] %}
-                        <div class="book-item">{{ book }}</div>
+                        <div class="book-item">{% if book is mapping %}{{ book.title }}<a href="https://hardcover.app/books/{{ book.slug }}" target="_blank" class="book-link" title="View on Hardcover"></a>{% else %}{{ book }}{% endif %}</div>
                         {% endfor %}
                     </div>
                 </div>
