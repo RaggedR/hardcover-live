@@ -526,21 +526,18 @@ def send_invite():
     book = BOOK_BY_ID[book_id]
     from_user = USER_BY_ID[from_user_id]
 
-    # Check if group exists for this book
+    # Check if group exists for this book, create if not
     group = chat_db.get_group_chat_for_book(book_id)
-    group_id = group['id'] if group else None
+    if not group:
+        group_id = chat_db.create_group_chat(book_id, book['title'], from_user_id)
+    else:
+        group_id = group['id']
 
-    # Send invitation
-    invite_id = chat_db.send_invitation(
-        from_user_id=from_user_id,
-        to_user_id=to_user_id,
-        book_id=book_id,
-        book_title=book['title'],
-        group_id=group_id,
-        message=f"{from_user['name']} invites you to discuss \"{book['title']}\" in a book club!"
-    )
+    # Send invitation as a regular message
+    invite_message = f"📚 Book Club Invitation!\n\nI'd love to discuss \"{book['title']}\" with you!\n\nJoin the discussion: /group/{group_id}?user_id={to_user_id}"
+    msg_id, timestamp = chat_db.send_message(from_user_id, to_user_id, invite_message)
 
-    return jsonify({'success': True, 'invite_id': invite_id})
+    return jsonify({'success': True, 'message_id': msg_id})
 
 
 @app.route('/invitations')
