@@ -254,8 +254,18 @@
             </button>
         </form>
 
+        <button type="button" onclick="goToBookClub()" style="margin-top: 15px;">
+            <span class="emoji">📖</span> Book Club
+        </button>
+
         <div id="messages-link" class="messages-link">
-            <a href="#" id="view-messages" onclick="return checkUserSelected()">💬 View My Messages</a>
+            <a href="#" id="view-messages" onclick="return checkUserSelected()">💬 Messages</a>
+            <span style="margin: 0 10px; color: #ccc;">|</span>
+            <a href="#" id="invitations-link" onclick="return goToInvitations()">📬 Invitations <span id="invite-badge" style="display:none; background:#e53935; color:white; border-radius:10px; padding:2px 6px; font-size:0.8em; margin-left:3px;"></span></a>
+            <span style="margin: 0 10px; color: #ccc;">|</span>
+            <a href="#" id="book-club-link" onclick="return goToBookClub()">📖 Book Club</a>
+            <span style="margin: 0 10px; color: #ccc;">|</span>
+            <a href="#" id="my-groups-link" onclick="return goToMyGroups()">👥 My Book Clubs</a>
         </div>
 
         <div class="footer">
@@ -389,6 +399,61 @@
             }
             return true;
         }
+
+        function goToBookClub() {
+            if (!userIdInput.value) {
+                alert('Please select your name first');
+                searchInput.focus();
+                return false;
+            }
+            window.location.href = '/book_club?user_id=' + userIdInput.value;
+            return false;
+        }
+
+        function goToMyGroups() {
+            if (!userIdInput.value) {
+                alert('Please select your name first');
+                searchInput.focus();
+                return false;
+            }
+            window.location.href = '/my_groups?user_id=' + userIdInput.value;
+            return false;
+        }
+
+        function goToInvitations() {
+            if (!userIdInput.value) {
+                alert('Please select your name first');
+                searchInput.focus();
+                return false;
+            }
+            window.location.href = '/invitations?user_id=' + userIdInput.value;
+            return false;
+        }
+
+        // Check for invitation count when user is selected
+        async function checkInvitations() {
+            if (!userIdInput.value) return;
+            try {
+                const response = await fetch('/invitations/count?user_id=' + userIdInput.value);
+                const data = await response.json();
+                const badge = document.getElementById('invite-badge');
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Error checking invitations:', err);
+            }
+        }
+
+        // Override selectUser to also check invitations
+        const originalSelectUser = selectUser;
+        selectUser = function(id, name, username) {
+            originalSelectUser(id, name, username);
+            checkInvitations();
+        };
     </script>
 </body>
 </html>

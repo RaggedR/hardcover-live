@@ -19,6 +19,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 RECOMMENDATIONS_FILE = os.path.join(DATA_DIR, "recommendations.json")
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 CLUSTERS_FILE = os.path.join(DATA_DIR, "clusters.json")
+BOOKS_FILE = os.path.join(DATA_DIR, "books.json")
+BOOK_READERS_FILE = os.path.join(DATA_DIR, "book_readers.json")
 
 # Load pre-computed data
 print("Loading pre-computed data...")
@@ -47,14 +49,31 @@ except FileNotFoundError:
     print("ERROR: clusters.json not found!")
     CLUSTERS = {}
 
+try:
+    with open(BOOKS_FILE, 'r') as f:
+        BOOKS = json.load(f)
+    print(f"✓ Loaded {len(BOOKS)} books")
+except FileNotFoundError:
+    print("WARNING: books.json not found (book club feature disabled)")
+    BOOKS = []
+
+try:
+    with open(BOOK_READERS_FILE, 'r') as f:
+        BOOK_READERS = json.load(f)
+    print(f"✓ Loaded book readers data")
+except FileNotFoundError:
+    print("WARNING: book_readers.json not found (book club feature disabled)")
+    BOOK_READERS = {}
+
 print("✓ App ready!")
 
 # Initialize chat database
 chat_db.init_db()
 print("✓ Chat database ready!")
 
-# Create lookup dictionaries for users
+# Create lookup dictionaries for users and books
 USER_BY_ID = {u['id']: u for u in USERS}
+BOOK_BY_ID = {b['id']: b for b in BOOKS}
 
 
 @app.route('/')
@@ -136,6 +155,84 @@ def view_cluster(cluster_id):
                          members=members,
                          total_members=len(members),
                          viewing_user=viewing_user)
+
+
+@app.route('/book_club')
+def book_club():
+    """Book club finder - search for a book to find compatible reading partners."""
+    user_id = request.args.get('user_id', type=int)
+    user = USER_BY_ID.get(user_id) if user_id else None
+
+    # Get user's read books from recommendations
+    user_books = []
+    if user_id:
+        user_key = str(user_id)
+        if user_key in RECOMMENDATIONS:
+            user_books = RECOMMENDATIONS[user_key].get('read_books', [])
+
+    return render_template('book_club.html',
+                         user=user,
+                         user_books=user_books,
+                         books=BOOKS,
+                         total_books=len(BOOKS))
+
+
+@app.route('/book_club/<int:book_id>')
+def book_club_results(book_id):
+    """Find compatible readers for a specific book."""
+    user_id = request.args.get('user_id', type=int)
+    if not user_id or user_id not in USER_BY_ID:
+        return redirect(url_for('book_club'))
+
+    if book_id not in BOOK_BY_ID:
+        return "Book not found", 404
+
+    book = BOOK_BY_ID[book_id]
+    user = USER_BY_ID[user_id]
+    book_key = str(book_id)
+
+    # Get all users who have read this book
+    reader_ids = BOOK_READERS.get(book_key, [])
+
+    # Filter to users in our system (excluding the current user)
+    reader_ids = [rid for rid in reader_ids if rid in USER_BY_ID and rid != user_id]
+
+    # Get similarity scores from recommendations
+    user_key = str(user_id)
+    similarity_map = {}
+    shared_books_map = {}
+
+    if user_key in RECOMMENDATIONS:
+        for match in RECOMMENDATIONS[user_key]['matches']:
+            similarity_map[match['user_id']] = match['similarity']
+            shared_books_map[match['user_id']] = match.get('shared_books', [])
+
+    # Build compatible readers list with similarity scores
+    compatible_readers = []
+    for rid in reader_ids:
+        reader = USER_BY_ID[rid]
+        similarity = similarity_map.get(rid, 0)
+        shared_books = shared_books_map.get(rid, [])
+
+        compatible_readers.append({
+            'user_id': rid,
+            'name': reader['name'],
+            'username': reader['username'],
+            'similarity': similarity,
+            'shared_books': shared_books[:5]
+        })
+
+    # Sort by similarity (highest first)
+    compatible_readers.sort(key=lambda x: x['similarity'], reverse=True)
+
+    # Take top 10
+    top_readers = compatible_readers[:10]
+
+    return render_template('book_club_results.html',
+                         user=user,
+                         book=book,
+                         readers=top_readers,
+                         total_readers=len(reader_ids))
 
 
 def get_top_matches(user_id: int, num_matches: int = 10) -> list:
@@ -279,6 +376,204 @@ def chat_poll_messages(other_user_id):
         msg['timestamp_formatted'] = format_timestamp(msg['timestamp'])
 
     return jsonify({'messages': messages})
+
+
+# ============================================================================
+# GROUP CHAT (BOOK CLUB) ROUTES
+# ============================================================================
+
+@app.route('/group/<int:group_id>', methods=['GET', 'POST'])
+def group_chat(group_id):
+    """View or send messages in a group chat."""
+    user_id = request.args.get('user_id', type=int) or request.form.get('user_id', type=int)
+    if not user_id or user_id not in USER_BY_ID:
+        return redirect(url_for('index'))
+
+    group = chat_db.get_group_by_id(group_id)
+    if not group:
+        return "Group not found", 404
+
+    user = USER_BY_ID[user_id]
+
+    # Auto-join if not a member (open book clubs)
+    if not chat_db.is_group_member(group_id, user_id):
+        chat_db.join_group_chat(group_id, user_id)
+
+    # Handle POST (send message)
+    if request.method == 'POST':
+        message = request.form.get('message', '').strip()
+        if message:
+            msg_id, timestamp = chat_db.send_group_message(group_id, user_id, message)
+            return jsonify({
+                'success': True,
+                'timestamp': timestamp,
+                'timestamp_formatted': format_timestamp(timestamp)
+            })
+        return jsonify({'success': False, 'error': 'Empty message'})
+
+    # Get messages
+    messages = chat_db.get_group_messages(group_id)
+    for msg in messages:
+        msg['timestamp_formatted'] = format_timestamp(msg['timestamp'])
+        # Add user info
+        if msg['from_user_id'] in USER_BY_ID:
+            msg['from_user'] = USER_BY_ID[msg['from_user_id']]
+        else:
+            msg['from_user'] = {'name': f"User {msg['from_user_id']}", 'username': 'unknown'}
+
+    last_timestamp = messages[-1]['timestamp'] if messages else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Get members
+    members = chat_db.get_group_members(group_id)
+    member_info = []
+    for m in members:
+        if m['user_id'] in USER_BY_ID:
+            member_info.append(USER_BY_ID[m['user_id']])
+
+    # Get book info if available
+    book = BOOK_BY_ID.get(group['book_id'])
+
+    return render_template('group_chat.html',
+                         user=user,
+                         group=group,
+                         book=book,
+                         messages=messages,
+                         members=member_info,
+                         last_timestamp=last_timestamp)
+
+
+@app.route('/group/<int:group_id>/messages')
+def group_poll_messages(group_id):
+    """Poll for new group messages (JSON endpoint)."""
+    user_id = request.args.get('user_id', type=int)
+    since = request.args.get('since', '')
+
+    if not user_id or user_id not in USER_BY_ID:
+        return jsonify({'messages': []})
+
+    if not chat_db.is_group_member(group_id, user_id):
+        return jsonify({'messages': []})
+
+    messages = chat_db.get_group_messages(group_id, since=since if since else None)
+    for msg in messages:
+        msg['timestamp_formatted'] = format_timestamp(msg['timestamp'])
+        if msg['from_user_id'] in USER_BY_ID:
+            msg['from_user'] = USER_BY_ID[msg['from_user_id']]
+        else:
+            msg['from_user'] = {'name': f"User {msg['from_user_id']}", 'username': 'unknown'}
+
+    return jsonify({'messages': messages})
+
+
+@app.route('/group/create/<int:book_id>', methods=['POST'])
+def create_book_club(book_id):
+    """Create a new book club group chat."""
+    user_id = request.form.get('user_id', type=int)
+    if not user_id or user_id not in USER_BY_ID:
+        return redirect(url_for('index'))
+
+    if book_id not in BOOK_BY_ID:
+        return "Book not found", 404
+
+    book = BOOK_BY_ID[book_id]
+
+    # Check if group already exists for this book
+    existing = chat_db.get_group_chat_for_book(book_id)
+    if existing:
+        return redirect(url_for('group_chat', group_id=existing['id'], user_id=user_id))
+
+    # Create new group
+    group_id = chat_db.create_group_chat(book_id, book['title'], user_id)
+
+    return redirect(url_for('group_chat', group_id=group_id, user_id=user_id))
+
+
+@app.route('/my_groups')
+def my_groups():
+    """View all book club groups the user is a member of."""
+    user_id = request.args.get('user_id', type=int)
+    if not user_id or user_id not in USER_BY_ID:
+        return redirect(url_for('index'))
+
+    user = USER_BY_ID[user_id]
+    groups = chat_db.get_user_groups(user_id)
+
+    # Add book info to each group
+    for g in groups:
+        g['book'] = BOOK_BY_ID.get(g['book_id'])
+
+    return render_template('my_groups.html', user=user, groups=groups)
+
+
+@app.route('/invite', methods=['POST'])
+def send_invite():
+    """Send a book club invitation to another user."""
+    from_user_id = request.form.get('from_user_id', type=int)
+    to_user_id = request.form.get('to_user_id', type=int)
+    book_id = request.form.get('book_id', type=int)
+
+    if not all([from_user_id, to_user_id, book_id]):
+        return jsonify({'success': False, 'error': 'Missing parameters'})
+
+    if from_user_id not in USER_BY_ID or to_user_id not in USER_BY_ID:
+        return jsonify({'success': False, 'error': 'User not found'})
+
+    if book_id not in BOOK_BY_ID:
+        return jsonify({'success': False, 'error': 'Book not found'})
+
+    book = BOOK_BY_ID[book_id]
+    from_user = USER_BY_ID[from_user_id]
+
+    # Check if group exists for this book
+    group = chat_db.get_group_chat_for_book(book_id)
+    group_id = group['id'] if group else None
+
+    # Send invitation
+    invite_id = chat_db.send_invitation(
+        from_user_id=from_user_id,
+        to_user_id=to_user_id,
+        book_id=book_id,
+        book_title=book['title'],
+        group_id=group_id,
+        message=f"{from_user['name']} invites you to discuss \"{book['title']}\" in a book club!"
+    )
+
+    return jsonify({'success': True, 'invite_id': invite_id})
+
+
+@app.route('/invitations')
+def view_invitations():
+    """View all invitations for the current user."""
+    user_id = request.args.get('user_id', type=int)
+    if not user_id or user_id not in USER_BY_ID:
+        return redirect(url_for('index'))
+
+    user = USER_BY_ID[user_id]
+    invitations = chat_db.get_user_invitations(user_id)
+
+    # Mark all as seen
+    chat_db.mark_all_invitations_seen(user_id)
+
+    # Enrich with user info
+    for inv in invitations:
+        if inv['from_user_id'] in USER_BY_ID:
+            inv['from_user'] = USER_BY_ID[inv['from_user_id']]
+        else:
+            inv['from_user'] = {'name': f"User {inv['from_user_id']}", 'username': 'unknown'}
+        inv['book'] = BOOK_BY_ID.get(inv['book_id'])
+
+    return render_template('invitations.html', user=user, invitations=invitations)
+
+
+@app.route('/invitations/count')
+def invitation_count():
+    """Get unseen invitation count."""
+    user_id = request.args.get('user_id', type=int)
+    if not user_id:
+        return jsonify({'count': 0})
+
+    count = chat_db.get_unseen_invitation_count(user_id)
+    return jsonify({'count': count})
 
 
 if __name__ == '__main__':
