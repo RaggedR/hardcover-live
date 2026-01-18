@@ -82,9 +82,11 @@ def index():
     return render_template('index.html', users=USERS)
 
 
-@app.route('/find_friends', methods=['POST'])
+@app.route('/find_friends', methods=['GET', 'POST'])
 def find_friends():
     """Find friends for selected user"""
+    if request.method == 'GET':
+        return redirect(url_for('index'))
     user_id = request.form['user_id']
     num_matches = int(request.form.get('num_matches', 5))
 
