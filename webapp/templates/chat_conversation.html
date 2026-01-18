@@ -290,7 +290,7 @@
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ' + (isSent ? 'sent' : 'received');
             msgDiv.innerHTML = `
-                <div class="message-bubble">${escapeHtml(text)}</div>
+                <div class="message-bubble">${linkifyUrls(text)}</div>
                 <div class="message-time">${timestamp}</div>
             `;
             messagesContainer.appendChild(msgDiv);
@@ -302,6 +302,18 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        function linkifyUrls(text) {
+            // First escape HTML, then convert URLs to links
+            const escaped = escapeHtml(text);
+            const urlPattern = /(https?:\/\/[^\s<]+)/g;
+            return escaped.replace(urlPattern, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+        }
+
+        // Linkify URLs in existing messages on page load
+        document.querySelectorAll('.message-bubble').forEach(bubble => {
+            bubble.innerHTML = linkifyUrls(bubble.textContent);
+        });
 
         // Poll for new messages every 3 seconds
         setInterval(function() {

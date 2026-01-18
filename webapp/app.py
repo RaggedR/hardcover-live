@@ -534,8 +534,10 @@ def send_invite():
     else:
         group_id = group['id']
 
-    # Send invitation as a regular message
-    invite_message = f"📚 Book Club Invitation!\n\nI'd love to discuss \"{book['title']}\" with you!\n\nJoin the discussion: /group/{group_id}?user_id={to_user_id}"
+    # Send invitation as a regular message with full URL
+    base_url = request.host_url.rstrip('/')
+    group_link = f"{base_url}/group/{group_id}?user_id={to_user_id}"
+    invite_message = f"📚 Book Club Invitation!\n\nI'd love to discuss \"{book['title']}\" with you!\n\nJoin the discussion: {group_link}"
     msg_id, timestamp = chat_db.send_message(from_user_id, to_user_id, invite_message)
 
     return jsonify({'success': True, 'message_id': msg_id})
