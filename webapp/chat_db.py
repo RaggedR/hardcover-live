@@ -207,6 +207,16 @@ def get_unread_count(user_id: int) -> int:
         return result['count']
 
 
+def has_messaged_you(user_id: int, other_user_id: int) -> bool:
+    """Check if other_user has ever sent a message to user."""
+    with get_db() as conn:
+        result = conn.execute(
+            "SELECT 1 FROM messages WHERE from_user_id = ? AND to_user_id = ? LIMIT 1",
+            (other_user_id, user_id)
+        ).fetchone()
+        return result is not None
+
+
 # ============================================================================
 # GROUP CHAT FUNCTIONS
 # ============================================================================

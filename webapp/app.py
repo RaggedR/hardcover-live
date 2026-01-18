@@ -307,10 +307,11 @@ def chat_conversation(other_user_id):
     if other_user_id not in USER_BY_ID:
         return "User not found", 404
 
-    # Check if other_user is in top 10 matches (access control)
+    # Check if allowed to chat: top 10 matches OR they've messaged you
     top_matches = get_top_matches(user_id, 10)
-    if other_user_id not in top_matches:
-        return "You can only chat with your top 10 book friends", 403
+    can_chat = other_user_id in top_matches or chat_db.has_messaged_you(user_id, other_user_id)
+    if not can_chat:
+        return "You can only chat with your top 10 book friends or people who messaged you", 403
 
     user = USER_BY_ID[user_id]
     other_user = USER_BY_ID[other_user_id]
